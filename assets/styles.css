@@ -1,0 +1,54 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.storage-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: row;
+    gap: 50px;
+    height: 100%;
+}
+
+.item-storage {
+    display: grid;
+    background-image: url('/assets/images/slot-empty.png');
+    overflow: hidden;
+    position: relative;
+}
+
+.item {
+    background-image: url('/assets/images/slot-taken.png');
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    cursor: grab;
+}
+
+.item:active {
+    cursor: grabbing;
+}
+
+.item img {
+    pointer-events: none;
+    user-select: none;
+    max-width: 100%;
+}
+
+.item-shadow {
+    background-image: url('/assets/images/slot-taken.png');
+    filter: hue-rotate(280deg);
+    display: none;
+    opacity: 0.5;
+    pointer-events: none;
+    user-select: none;
+}
+
+.item-shadow.red {
+    filter: hue-rotate(175deg)
+}
