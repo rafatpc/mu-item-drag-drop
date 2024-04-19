@@ -1,36 +1,15 @@
 import { createElement, createDragImage } from "./helpers.js";
 import { ITEM_IMAGE_SIZE } from "./settings.js";
 
-/**
- * @typedef Item
- * @property {string} [uid] Item GUID
- * @property {string} img Image source
- * @property {[number, number]} pos [x, y]
- * @property {[number, number]} size [x, y]
- */
+// @ts-check
 
-/**
- * @template T
- * @typedef ItemEventDetail
- * @property {T} detail  Event data
- */
+/** @typedef {import('./typings').IStorage} IStorage */
+/** @typedef {import('./typings').Item} Item */
+/** @typedef {import('./typings').ItemEvent} ItemEvent */
+/** @typedef {import('./typings').ItemUidEvent} ItemUidEvent */
+/** @typedef {import('./typings').StorageOptions} StorageOptions */
 
-/** @typedef {ItemEventDetail<Item> & Event} ItemEvent */
-/** @typedef {ItemEventDetail<string> & Event} ItemUidEvent */
-
-/**
- * @typedef StorageOptions
- * @property {number} x
- * @property {number} y
- */
-
-/** @enum {number} */
-const StorageOperation = {
-    Add: 0,
-    Delete: 1,
-    Update: 2,
-}
-
+/** @implements {IStorage} */
 export class Storage {
     /** @type {HTMLDivElement} */
     #container;
