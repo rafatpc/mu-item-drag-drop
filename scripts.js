@@ -11,7 +11,7 @@ const items = [
 ];
 
 const gameStorage = new Storage('#game-wh', { x: 8, y: 15 });
-items.forEach(async (item) => await gameStorage.addItem(item));
+items.forEach(async (item) => await gameStorage.placeItem(item));
 
 const webStorage = new Storage('#web-wh', { x: 8, y: 15 });
-items.forEach(async (item) => await webStorage.addItem(item));
+items.forEach(async (item) => await webStorage.placeItem(item));

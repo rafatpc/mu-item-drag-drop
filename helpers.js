@@ -1,6 +1,11 @@
 import { ITEM_IMAGE_SIZE } from "./settings.js";
 
-// Dumb way to save few lines of code and add syntax sugar to elements creation
+/**
+ * Dumb way to save few lines of code and add syntax sugar to elements creation
+ * @param {string} nodeType 
+ * @param {Record<string, any>} params
+ * @returns {HTMLElement}
+ */
 export const createElement = (nodeType, { style, src, draggable, dataset, className, children } = {}) => {
     const node = document.createElement(nodeType);
     node.src = src;
@@ -12,6 +17,11 @@ export const createElement = (nodeType, { style, src, draggable, dataset, classN
     return node;
 }
 
+/**
+ * Creates a dragging image for an item
+ * @param {import("./storage.js").Item} item 
+ * @returns {Promise<HTMLCanvasElement>}
+ */
 export const createDragImage = async item => {
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
@@ -37,6 +47,12 @@ export const createDragImage = async item => {
     return canvas;
 }
 
+/**
+ * Creates a background for the dragging image
+ * (Currently disabled, see `createDragImage`)
+ * @param {import("./storage.js").Item} item 
+ * @returns {HTMLCanvasElement}
+ */
 export const createDragBackground = async item => {
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
@@ -66,8 +82,16 @@ export const createDragBackground = async item => {
     return canvas;
 }
 
+/**
+ * @returns {HTMLImageElement}
+ */
 export const getSlotTakenImage = () => loadImage("/assets/images/slot-taken.png");
 
+/**
+ * Loads an image to use in a canvas
+ * @param {string} src 
+ * @returns {Promise<HTMLImageElement>}
+ */
 export const loadImage = src => {
     return new Promise((resolve) => {
         const img = new Image();
