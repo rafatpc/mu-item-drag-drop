@@ -92,8 +92,8 @@ export class Storage {
             return;
         }
 
-        const [x, y] = item.pos;
-        const [xSize, ySize] = item.size;
+        const { x, y } = item.pos;
+        const { x: xSize, y: ySize } = item.size;
 
         itemElement.style.gridColumn = `${x} / span ${xSize}`;
         itemElement.style.gridRow = `${y} / span ${ySize}`;
@@ -155,17 +155,16 @@ export class Storage {
      * @param {Coordinates} coordinates
      * @returns {boolean}
      */
-    canPlaceOnSlot(item, { x, y }) {
-        const [itemX, itemY] = item.size;
-        const itemEndX = x + itemX - 1;
-        const itemEndY = y + itemY - 1;
-        const items = Array.from(this.#itemMap.values());
-
+    canPlaceOnSlot(item, { x: itemX, y: itemY }) {
+        const itemEndX = itemX + item.size.x - 1;
+        const itemEndY = itemY + item.size.y - 1;
         const isOverflowing = itemEndX > this.#x || itemEndY > this.#y;
 
         if (isOverflowing) {
             return false;
         }
+
+        const items = Array.from(this.#itemMap.values());
 
         for (let i = 0; i < items.length; i++) {
             const currentItem = items[i];
@@ -185,9 +184,9 @@ export class Storage {
 
             const areCoordinatesFree =
                 itemEndX < currentItemX
-                || x > currentItemEndX
+                || itemX > currentItemEndX
                 || itemEndY < currentItemY
-                || y > currentItemEndY;
+                || itemY > currentItemEndY;
 
             if (!areCoordinatesFree) {
                 return false;
@@ -218,16 +217,14 @@ export class Storage {
      * @returns {HTMLDivElement}
      */
     #createItemImage(uid, item) {
-        const [x, y] = item.pos;
-        const [xSize, ySize] = item.size;
         const itemImage = createElement('img', { src: item.img });
         const itemElement = createElement('div', {
             draggable: true,
             className: 'item',
             dataset: { uid },
             style: {
-                gridColumn: `${x} / span ${xSize}`,
-                gridRow: `${y} / span ${ySize}`,
+                gridColumn: `${item.pos.x} / span ${item.size.x}`,
+                gridRow: `${item.pos.y} / span ${item.size.y}`,
             },
             children: [itemImage]
         });

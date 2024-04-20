@@ -11,8 +11,7 @@ export class Api {
      * @returns 
      */
     moveItem(item, originStorage, targetStorage) {
-        const [x, y] = item.pos;
-        const newSlot = this.#getSlotByCoordinates(targetStorage, { x, y })
+        const newSlot = this.#getSlotByCoordinates(targetStorage, item.pos)
         const isSameStorage = originStorage.compareWith(targetStorage);
 
         // TODO: Implement API call to move the item
@@ -30,7 +29,7 @@ export class Api {
      * @param {Coordinates} coordinates
      * @returns {number} Slot number
      */
-    #getSlotByCoordinates(storage, { x, y }) {
-        return (x - 1) + ((y - 1) * storage.dimensions.x);
+    #getSlotByCoordinates(storage, coordinates) {
+        return (coordinates.x - 1) + ((coordinates.y - 1) * storage.dimensions.x);
     }
 }

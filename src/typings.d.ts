@@ -1,7 +1,7 @@
 export type Item = {
     img: string;
-    pos: [number, number];
-    size: [number, number];
+    pos: Coordinates;
+    size: Dimensions;
 };
 
 export type StorageItem = { uid: string; } & Item;
@@ -19,10 +19,15 @@ export type StorageOptions = {
     y: number;
 };
 
+export type Dimensions = {
+    x: number;
+    y: number;
+};
+
 export type Coordinates = {
     x: number;
-    y: number
-}
+    y: number;
+};
 
 export type StorageSupervisorOptions = {
     selector: string;

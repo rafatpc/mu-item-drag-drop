@@ -26,7 +26,7 @@ export const createDragImage = async item => {
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
 
-    const [x, y] = item.size;
+    const { x, y } = item.size;
     canvas.width = x * ITEM_IMAGE_SIZE;
     canvas.height = y * ITEM_IMAGE_SIZE;
 
@@ -57,7 +57,7 @@ export const createDragBackground = async item => {
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
 
-    const [x, y] = item.size;
+    const { x, y } = item.size;
     canvas.width = x * ITEM_IMAGE_SIZE;
     canvas.height = y * ITEM_IMAGE_SIZE;
     context.filter = "hue-rotate(280deg)";
@@ -83,7 +83,7 @@ export const createDragBackground = async item => {
 }
 
 /**
- * @returns {HTMLImageElement}
+ * @returns {Promise<HTMLImageElement>}
  */
 export const getSlotTakenImage = () => loadImage("/assets/images/slot-taken.png");
 

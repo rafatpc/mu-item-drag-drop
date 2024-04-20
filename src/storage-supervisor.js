@@ -128,15 +128,15 @@ export class StorageSupervisor {
     #updateItemPositionFactory(storage) {
         /** @param {DragEvent} event */
         return async (event) => {
-            const { x, y } = this.#getCoordinatesByPosition(storage, event.clientX, event.clientY);
+            const coordinates = this.#getCoordinatesByPosition(storage, event.clientX, event.clientY);
 
             storage.hideItemShadow();
 
-            if (!storage.canPlaceOnSlot(this.#draggedItem, { x, y })) {
+            if (!storage.canPlaceOnSlot(this.#draggedItem, coordinates)) {
                 return;
             }
 
-            const newItem = { ...this.#draggedItem, pos: [x, y] };
+            const newItem = { ...this.#draggedItem, pos: coordinates };
             await this.#moveItem(storage, newItem);
         }
     }
@@ -229,8 +229,7 @@ export class StorageSupervisor {
     #showItemShadow(activeStorage) {
         this.#storageMap.forEach((storage) => {
             if (activeStorage.compareWith(storage)) {
-                const [x, y] = this.#draggedItem.size;
-                activeStorage.showItemShadow({ x, y });
+                activeStorage.showItemShadow(this.#draggedItem.size);
                 return;
             }
 
