@@ -1,10 +1,13 @@
+
 export type Item = {
     img: string;
     pos: Coordinates;
     size: Dimensions;
 };
 
-export type StorageItem = { uid: string; } & Item;
+export type GUID = `${string}-${string}-${string}-${string}-${string}`;
+
+export type StorageItem = { uid: GUID; } & Item;
 
 export type ItemEventDetail<T> = {
     detail: T;
@@ -32,4 +35,4 @@ export type Coordinates = {
 export type StorageSupervisorOptions = {
     selector: string;
     items: Item[];
-} & StorageOptions;
+} & Omit<StorageOptions, "id">;

@@ -1,51 +1,35 @@
-import { Storage } from './storage.js';
+import { Storage } from './storage';
 import { ITEM_IMAGE_SIZE } from "./settings.js";
 import { Api } from './api.js';
-
-/** @typedef {import('./typings').StorageSupervisorOptions} StorageSupervisorOptions */
-/** @typedef {import('./typings').StorageOptions} StorageOptions */
-/** @typedef {import('./typings').StorageItem} StorageItem */
-/** @typedef {import('./typings').Item} Item */
+import type { Coordinates, GUID, Item, StorageItem, StorageSupervisorOptions } from './types';
 
 export class StorageSupervisor {
-    /** @type {Map<string, Storage>} */
-    #storageMap = new Map();
-
-    /** @type {Map<string, Item>} */
-    #itemMap = new Map();
-
-    /** @type {Map<string, string>} */
-    #itemStorageMap = new Map();
-
-    /** @type {StorageItem} */
-    #draggedItem = null;
-
-    /** @type {Api} */
-    #api;
+    #storageMap: Map<string, Storage> = new Map();
+    #itemMap: Map<GUID, StorageItem> = new Map();
+    #itemStorageMap: Map<GUID, string> = new Map();
+    #draggedItem: StorageItem | null = null;
+    #api: Api;
 
     constructor() {
         this.#api = new Api();
     }
 
-    /**
-     * Adds a storage to the supervisor
-     * @param {string} id 
-     * @param {StorageSupervisorOptions} options
-     */
-    async addStorage(id, { selector, items, x, y }) {
+    async addStorage(id: string, { selector, items, x, y }: StorageSupervisorOptions) {
         const storage = new Storage(selector, { x, y, id });
         this.#storageMap.set(id, storage);
         items.forEach(async (item) => await this.#addItem(storage, item));
         this.#attachStorageListeners(storage);
     }
 
-    /**
-     * @param {Storage} storage
-     * @param {StorageItem} item
-     */
-    async #moveItem(storage, item) {
+    async #moveItem(storage: Storage, item: StorageItem) {
         const { uid, ...itemData } = item;
         const itemStorage = this.#getStorageByItemId(uid);
+
+        if (!itemStorage) {
+            console.error(`Couldn't find ${uid} in any storage.`, { item });
+            return;
+        }
+
         const result = await this.#api.moveItem(itemData, itemStorage, storage);
 
         console.log(result);
@@ -54,11 +38,7 @@ export class StorageSupervisor {
         await this.#addItem(storage, itemData);
     }
 
-    /**
-     * @param {Storage} storage
-     * @param {Item} item 
-     */
-    async #addItem(storage, item) {
+    async #addItem(storage: Storage, item: Item) {
         const uid = crypto.randomUUID();
         const itemImage = await storage.addItem(uid, item);
 
@@ -68,21 +48,13 @@ export class StorageSupervisor {
         this.#itemMap.set(uid, { uid, ...item });
     }
 
-    /**
-     * @param {Storage} storage
-     * @param {StorageItem} item
-     */
-    #removeItem(storage, item) {
+    #removeItem(storage: Storage, item: StorageItem) {
         this.#itemStorageMap.delete(item.uid);
-        this.#itemMap.set(item.uid);
+        this.#itemMap.set(item.uid, item);
         storage.removeItem(item);
     }
 
-    /**
-     * Container drag & drop events
-     * @param {Storage} storage 
-     */
-    #attachStorageListeners(storage) {
+    #attachStorageListeners(storage: Storage) {
         const { container } = storage;
 
         container.addEventListener('dragenter', this.#showItemShadowFactory(storage));
@@ -91,29 +63,24 @@ export class StorageSupervisor {
         container.addEventListener('drop', this.#updateItemPositionFactory(storage));
     }
 
-    /**
-     * Item drag & drop events
-     * @param {string} uid 
-     * @param {HTMLDivElement} item
-     */
-    #attachItemListeners(uid, item) {
+    #attachItemListeners(uid: GUID, item: HTMLDivElement) {
         item.addEventListener("dragstart", this.#setDraggedItemFactory(uid));
         item.addEventListener("dragend", this.#clearDraggedItem.bind(this));
     }
 
-    /**
-     * @param {string} uid 
-     */
-    #setDraggedItemFactory(uid) {
-        /** @param {DragEvent} event */
-        return (event) => {
+    #setDraggedItemFactory(uid: GUID) {
+        return (event: DragEvent) => {
             const mirrorImage = this.#getMirrorImage(uid);
             const item = this.#itemMap.get(uid);
 
-            this.#draggedItem = { uid, ...item };
+            if (!item) {
+                return;
+            }
+
+            this.#draggedItem = { ...item, uid };
 
             if (mirrorImage) {
-                event.dataTransfer.setDragImage(mirrorImage, 0, 0);
+                event.dataTransfer?.setDragImage(mirrorImage, 0, 0);
             }
         }
     }
@@ -122,17 +89,13 @@ export class StorageSupervisor {
         this.#draggedItem = null;
     }
 
-    /**
-     * @param {Storage} storage 
-     */
-    #updateItemPositionFactory(storage) {
-        /** @param {DragEvent} event */
-        return async (event) => {
+    #updateItemPositionFactory(storage: Storage) {
+        return async (event: DragEvent) => {
             const coordinates = this.#getCoordinatesByPosition(storage, event.clientX, event.clientY);
 
             storage.hideItemShadow();
 
-            if (!storage.canPlaceOnSlot(this.#draggedItem, coordinates)) {
+            if (!this.#draggedItem || !storage.canPlaceOnSlot(this.#draggedItem, coordinates)) {
                 return;
             }
 
@@ -141,40 +104,29 @@ export class StorageSupervisor {
         }
     }
 
-    /** @param {Storage} storage */
-    #showItemShadowFactory(storage) {
-        /** @param {DragEvent} event */
-        return event => {
+    #showItemShadowFactory(storage: Storage) {
+        return (event: DragEvent) => {
             event.preventDefault();
             this.#showItemShadow(storage);
         }
     }
 
-    /** @param {Storage} storage */
-    #hideItemShadowFactory(storage) {
-        /** @param {DragEvent} event */
+    #hideItemShadowFactory(storage: Storage) {
         return () => this.#hideItemShadow(storage);
     }
 
-    /** @param {Storage} storage */
-    #moveItemShadowFactory(storage) {
-        /** @param {DragEvent} event */
-        return event => {
+    #moveItemShadowFactory(storage: Storage) {
+        return (event: DragEvent) => {
             event.preventDefault();
+
             const coordinates = this.#getCoordinatesByPosition(storage, event.clientX, event.clientY);
-            const state = storage.canPlaceOnSlot(this.#draggedItem, coordinates) ? 'free' : 'taken';
+            const state = storage.canPlaceOnSlot(this.#draggedItem!, coordinates) ? 'free' : 'taken';
 
             storage.moveItemShadow(coordinates, state);
         }
     }
 
-    /**
-     * @param {Storage} storage
-     * @param {number} x Storage X
-     * @param {number} y Storage Y
-     * @returns {{x: number, y: number}}
-     */
-    #getCoordinatesByPosition(storage, x, y) {
+    #getCoordinatesByPosition(storage: Storage, x: number, y: number): Coordinates {
         const { left, top } = storage.container.getBoundingClientRect();
 
         return {
@@ -183,36 +135,22 @@ export class StorageSupervisor {
         };
     }
 
-    /**
-     * Gets mirror item for an item
-     * @param {string} uid 
-     * @returns {HTMLDivElement}
-     */
-    #getMirrorImage(uid) {
+    #getMirrorImage(uid: GUID) {
         const storage = this.#getStorageByItemId(uid);
 
         if (!storage) {
-            return;
+            return null;
         }
 
         return storage.getMirrorImage(uid);
     }
 
-    /**
-     * Gets storage by item UID
-     * @param {string} uid Item UID
-     * @returns {Storage}
-     */
-    #getStorageByItemId(uid) {
+    #getStorageByItemId(uid: GUID) {
         const storageId = this.#itemStorageMap.get(uid);
-        return this.#storageMap.get(storageId);
+        return this.#storageMap.get(storageId!);
     }
 
-    /**
-     * Hides the shadow items on inactive storages
-     * @param {Storage} activeStorage 
-     */
-    #hideItemShadow(activeStorage) {
+    #hideItemShadow(activeStorage: Storage) {
         this.#storageMap.forEach((storage) => {
             if (activeStorage.compareWith(storage)) {
                 return;
@@ -222,13 +160,9 @@ export class StorageSupervisor {
         });
     }
 
-    /**
-     * Shows the shadow item on the storage the user is currently over
-     * @param {Storage} activeStorage 
-     */
-    #showItemShadow(activeStorage) {
+    #showItemShadow(activeStorage: Storage) {
         this.#storageMap.forEach((storage) => {
-            if (activeStorage.compareWith(storage)) {
+            if (activeStorage.compareWith(storage) && this.#draggedItem) {
                 activeStorage.showItemShadow(this.#draggedItem.size);
                 return;
             }

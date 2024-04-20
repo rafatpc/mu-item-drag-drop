@@ -1,41 +1,21 @@
-import { createElement, createDragImage } from "./helpers.js";
-import { ITEM_IMAGE_SIZE } from "./settings.js";
-
-// @ts-check
-
-/** @typedef {import('./typings').Item} Item */
-/** @typedef {import('./typings').StorageItem} StorageItem */
-/** @typedef {import('./typings').ItemEvent} ItemEvent */
-/** @typedef {import('./typings').ItemUidEvent} ItemUidEvent */
-/** @typedef {import('./typings').StorageOptions} StorageOptions */
-/** @typedef {import('./typings').Coordinates} Coordinates */
+import { createElement, createDragImage } from "./helpers";
+import { ITEM_IMAGE_SIZE } from "./settings";
+import { Coordinates, GUID, Item, StorageItem, StorageOptions } from "./types";
 
 export class Storage {
-    /** @type {HTMLDivElement} */
-    #container;
-
     #id;
     #x = 0;
     #y = 0;
 
-    /** @type {Map<string, HTMLDivElement>} */
-    #itemMap = new Map();
+    #container: HTMLDivElement;
+    #itemMirrors: HTMLDivElement;
+    #itemShadow: HTMLDivElement;
 
-    /** @type {HTMLDivElement} */
-    #itemMirrors;
+    #itemMap: Map<string, HTMLDivElement> = new Map();
+    #itemMirrorsMap: Map<string, HTMLCanvasElement> = new Map();
 
-    /** @type {Map<string, HTMLCanvasElement>} */
-    #itemMirrorsMap = new Map();
-
-    /** @type {HTMLDivElement} */
-    #itemShadow;
-
-    /**
-     * @param {string} selector CSS Selector for the item storage
-     * @param {StorageOptions} options Storage options
-     */
-    constructor(selector, { id, x, y }) {
-        this.#container = document.querySelector(selector);
+    constructor(selector: string, { id, x, y }: StorageOptions) {
+        this.#container = document.querySelector(selector)!;
         this.#x = x;
         this.#y = y;
         this.#id = id;
@@ -45,15 +25,17 @@ export class Storage {
         }
 
         this.#setDimesions();
-        this.#addShadowElements();
+
+        const shadow = createElement<HTMLDivElement>('div', { className: 'item-shadow' });
+        this.#itemShadow = shadow;
+        this.#container.append(shadow);
+
+        const mirrors = createElement<HTMLDivElement>('div', { className: 'item-mirrors' });
+        this.#itemMirrors = mirrors;
+        this.#container.append(mirrors);
     }
 
-    /**
-     * Places an item in the storage
-     * @param {Item} item
-     * @returns {Promise<HTMLDivElement>}
-     */
-    async addItem(uid, item) {
+    async addItem(uid: GUID, item: Item): Promise<HTMLDivElement> {
         const itemImage = this.#createItemImage(uid, item);
         const mirrorImage = await createDragImage(item);
 
@@ -66,11 +48,7 @@ export class Storage {
         return itemImage;
     }
 
-    /**
-     * Removes an item from the storage
-     * @param {StorageItem} item 
-     */
-    async removeItem(item) {
+    async removeItem(item: StorageItem) {
         const itemElement = this.#itemMap.get(item.uid);
 
         if (!itemElement) {
@@ -81,11 +59,7 @@ export class Storage {
         this.#itemMap.delete(item.uid);
     }
 
-    /**
-     * Updates an item in the storage
-     * @param {StorageItem} item 
-     */
-    async updateItem(uid, item) {
+    async updateItem(item: StorageItem) {
         const itemElement = this.#itemMap.get(item.uid);
 
         if (!itemElement) {
@@ -99,28 +73,15 @@ export class Storage {
         itemElement.style.gridRow = `${y} / span ${ySize}`;
     }
 
-    /**
-     * @param {string} uid Item ID
-     * @returns {HTMLDivElement}
-     */
-    getMirrorImage(uid) {
+    getMirrorImage(uid: GUID) {
         return this.#itemMirrorsMap.get(uid);
     }
 
-    /**
-     * Compares if the storage is the same as another one
-     * @param {Storage} storage
-     * @returns {boolean}
-     */
-    compareWith(storage) {
+    compareWith(storage: Storage) {
         return this.#id === storage?.id;
     }
 
-    /**
-     * Shows the "shadow" appearing below the item, when dragging it over a storage container
-     * @param {Coordinates} coordinates 
-     */
-    showItemShadow({ x, y }) {
+    showItemShadow({ x, y }: Coordinates) {
         this.#itemShadow.style.width = `${x * ITEM_IMAGE_SIZE}px`;
         this.#itemShadow.style.height = `${y * ITEM_IMAGE_SIZE}px`;
         this.#itemShadow.style.gridColumn = `0 / span ${x}`;
@@ -128,14 +89,9 @@ export class Storage {
         this.#itemShadow.style.display = 'block';
     }
 
-    /**
-     * Moves the "shadow" appearing below the item, when dragging it over a storage container
-     * @param {Coordinates} coordinates 
-     * @param {'free'|'taken'} state 
-     */
-    moveItemShadow({ x, y }, state) {
-        this.#itemShadow.style.gridColumn = x;
-        this.#itemShadow.style.gridRow = y;
+    moveItemShadow({ x, y }: Coordinates, state: 'free' | 'taken') {
+        this.#itemShadow.style.gridColumn = x.toString();
+        this.#itemShadow.style.gridRow = y.toString();;
 
         if (state === 'free') {
             this.#itemShadow.classList.remove('red');
@@ -145,17 +101,11 @@ export class Storage {
         this.#itemShadow.classList.add('red');
     }
 
-    /** Hides the "shadow" appearing below the item, when dragging it over a storage container */
     hideItemShadow() {
         this.#itemShadow.style.display = 'none';
     }
 
-    /**
-     * @param {StorageItem} item 
-     * @param {Coordinates} coordinates
-     * @returns {boolean}
-     */
-    canPlaceOnSlot(item, { x: itemX, y: itemY }) {
+    canPlaceOnSlot(item: StorageItem, { x: itemX, y: itemY }: Coordinates): boolean {
         const itemEndX = itemX + item.size.x - 1;
         const itemEndY = itemY + item.size.y - 1;
         const isOverflowing = itemEndX > this.#x || itemEndY > this.#y;
@@ -211,14 +161,9 @@ export class Storage {
         };
     }
 
-    /**
-     * @param {string} uid GUID
-     * @param {Item} item 
-     * @returns {HTMLDivElement}
-     */
-    #createItemImage(uid, item) {
-        const itemImage = createElement('img', { src: item.img });
-        const itemElement = createElement('div', {
+    #createItemImage(uid: GUID, item: Item) {
+        const itemImage = createElement<HTMLImageElement>('img', { src: item.img });
+        const itemElement = createElement<HTMLDivElement>('div', {
             draggable: true,
             className: 'item',
             dataset: { uid },
@@ -232,23 +177,11 @@ export class Storage {
         return itemElement;
     }
 
-    /** Set dimensions of the storage UI */
     #setDimesions() {
         this.#container.style.gridTemplateColumns = `repeat(${this.#x}, ${ITEM_IMAGE_SIZE}px)`;
         this.#container.style.width = `${this.#x * ITEM_IMAGE_SIZE}px`;
 
         this.#container.style.gridTemplateRows = `repeat(${this.#y}, ${ITEM_IMAGE_SIZE}px)`;
         this.#container.style.height = `${this.#y * ITEM_IMAGE_SIZE}px`;
-    }
-
-    /** Creates elements for the item shadow */
-    #addShadowElements() {
-        const shadow = createElement('div', { className: 'item-shadow' });
-        this.#itemShadow = shadow;
-        this.#container.append(shadow);
-
-        const mirrors = createElement('div', { className: 'item-mirrors' });
-        this.#itemMirrors = mirrors;
-        this.#container.append(mirrors);
     }
 }

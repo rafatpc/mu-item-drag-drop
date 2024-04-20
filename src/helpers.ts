@@ -1,30 +1,33 @@
 import { ITEM_IMAGE_SIZE } from "./settings.js";
+import { Item } from "./types";
 
 /**
  * Dumb way to save few lines of code and add syntax sugar to elements creation
- * @param {string} nodeType 
- * @param {Record<string, any>} params
- * @returns {HTMLElement}
  */
-export const createElement = (nodeType, { style, src, draggable, dataset, className, children } = {}) => {
+export const createElement = <T = HTMLElement>(
+    nodeType: string,
+    { style, src, draggable, dataset, className, children }: Record<string, any> = {}
+): T => {
     const node = document.createElement(nodeType);
-    node.src = src;
+    (node as any).src = src;
     draggable && (node.draggable = draggable);
-    Object.keys(style || {}).forEach(key => node.style[key] = style[key]);
+    Object.keys(style || {}).forEach(key => node.style[key as any] = style[key]);
     Object.keys(dataset || {}).forEach(key => node.dataset[key] = dataset[key]);
     className && node.classList.add(className.split(' '));
-    (children || []).forEach(child => node.append(child));
-    return node;
+    (children || []).forEach((child: HTMLElement) => node.append(child));
+    return node as T;
 }
 
 /**
  * Creates a dragging image for an item
- * @param {import("./storage.js").Item} item 
- * @returns {Promise<HTMLCanvasElement>}
  */
-export const createDragImage = async item => {
+export const createDragImage = async (item: Item): Promise<HTMLCanvasElement> => {
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
+
+    if (!context) {
+        return canvas;
+    }
 
     const { x, y } = item.size;
     canvas.width = x * ITEM_IMAGE_SIZE;
@@ -50,12 +53,14 @@ export const createDragImage = async item => {
 /**
  * Creates a background for the dragging image
  * (Currently disabled, see `createDragImage`)
- * @param {import("./storage.js").Item} item 
- * @returns {HTMLCanvasElement}
  */
-export const createDragBackground = async item => {
+export const createDragBackground = async (item: Item) => {
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
+
+    if (!context) {
+        return canvas;
+    }
 
     const { x, y } = item.size;
     canvas.width = x * ITEM_IMAGE_SIZE;
@@ -82,17 +87,12 @@ export const createDragBackground = async item => {
     return canvas;
 }
 
-/**
- * @returns {Promise<HTMLImageElement>}
- */
 export const getSlotTakenImage = () => loadImage("/assets/images/slot-taken.png");
 
 /**
  * Loads an image to use in a canvas
- * @param {string} src 
- * @returns {Promise<HTMLImageElement>}
  */
-export const loadImage = src => {
+export const loadImage = (src: string): Promise<HTMLImageElement> => {
     return new Promise((resolve) => {
         const img = new Image();
         img.src = src;
