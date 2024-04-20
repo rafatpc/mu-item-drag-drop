@@ -1,4 +1,4 @@
-import { Storage } from './storage.js';
+import { StorageSupervisor } from './storage-supervisor.js';
 
 const items = [
     { img: "/assets/items/1x1.png", pos: [5, 10], size: [1, 1] },
@@ -10,8 +10,18 @@ const items = [
     { img: "/assets/items/4x3.png", pos: [1, 12], size: [4, 3] },
 ];
 
-const gameStorage = new Storage('#game-wh', { x: 8, y: 15 });
-items.forEach(async (item) => await gameStorage.placeItem(item));
+const supervisor = new StorageSupervisor();
 
-const webStorage = new Storage('#web-wh', { x: 8, y: 15 });
-items.forEach(async (item) => await webStorage.placeItem(item));
+await supervisor.addStorage('game-storage', {
+    selector: '#game-wh',
+    items,
+    x: 8,
+    y: 15
+});
+
+await supervisor.addStorage('web-storage', {
+    selector: '#web-wh',
+    items,
+    x: 8,
+    y: 15
+});

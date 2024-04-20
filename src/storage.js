@@ -3,255 +3,124 @@ import { ITEM_IMAGE_SIZE } from "./settings.js";
 
 // @ts-check
 
-/** @typedef {import('./typings').IStorage} IStorage */
 /** @typedef {import('./typings').Item} Item */
+/** @typedef {import('./typings').StorageItem} StorageItem */
 /** @typedef {import('./typings').ItemEvent} ItemEvent */
 /** @typedef {import('./typings').ItemUidEvent} ItemUidEvent */
 /** @typedef {import('./typings').StorageOptions} StorageOptions */
+/** @typedef {import('./typings').Coordinates} Coordinates */
 
-/** @implements {IStorage} */
 export class Storage {
     /** @type {HTMLDivElement} */
     #container;
 
+    #id;
     #x = 0;
     #y = 0;
+
+    /** @type {Map<string, HTMLDivElement>} */
+    #itemMap = new Map();
 
     /** @type {HTMLDivElement} */
     #itemMirrors;
 
-    /** @type {Record<string, HTMLCanvasElement>} */
-    #itemMirrorsMap = {};
+    /** @type {Map<string, HTMLCanvasElement>} */
+    #itemMirrorsMap = new Map();
 
     /** @type {HTMLDivElement} */
     #itemShadow;
-
-    /** @type {string} */
-    #draggedItemUid = null;
-
-    /** @type {Item} */
-    #draggedItem = null;
-
-    /** @type {Record<string, Item>} */
-    #itemMap = {};
 
     /**
      * @param {string} selector CSS Selector for the item storage
      * @param {StorageOptions} options Storage options
      */
-    constructor(selector, { x, y }) {
+    constructor(selector, { id, x, y }) {
         this.#container = document.querySelector(selector);
         this.#x = x;
         this.#y = y;
+        this.#id = id;
 
         if (!this.#container) {
             throw new Error(`Can't initialize storage with selector <${selector}>`);
         }
 
         this.#setDimesions();
-        this.#attachListeners();
         this.#addShadowElements();
     }
 
     /**
      * Places an item in the storage
-     * @param {Item} item 
-     */
-    async placeItem(item) {
-        await this.#createItem(item);
-    }
-
-    /**
-     * Adds an item in the storage
      * @param {Item} item
+     * @returns {Promise<HTMLDivElement>}
      */
-    async addItem(item) {
-        // TODO: Add item in storage
-        console.log("Add item", item);
-        await this.placeItem(item);
+    async addItem(uid, item) {
+        const itemImage = this.#createItemImage(uid, item);
+        const mirrorImage = await createDragImage(item);
+
+        this.#container.append(itemImage);
+        this.#itemMirrors.append(mirrorImage);
+
+        this.#itemMirrorsMap.set(uid, mirrorImage);
+        this.#itemMap.set(uid, itemImage);
+
+        return itemImage;
     }
 
     /**
      * Removes an item from the storage
-     * @param {string} uid 
-     * @param {Item} item 
+     * @param {StorageItem} item 
      */
-    async removeItem(uid, item) {
-        console.log("Delete item", item);
-        // TODO: Delete item from storage
-        this.#removeItem(uid);
-    }
+    async removeItem(item) {
+        const itemElement = this.#itemMap.get(item.uid);
 
-    /**
-     * Updates an item in the storage
-     * @param {string} uid 
-     * @param {Item} newItem 
-     */
-    async updateItem(uid, newItem) {
-        // TODO: Update item position
-        console.log("Update item", newItem);
-        this.#updateItem(uid, newItem);
-    }
-
-    #setDimesions() {
-        this.#container.style.gridTemplateColumns = `repeat(${this.#x}, ${ITEM_IMAGE_SIZE}px)`;
-        this.#container.style.width = `${this.#x * ITEM_IMAGE_SIZE}px`;
-
-        this.#container.style.gridTemplateRows = `repeat(${this.#y}, ${ITEM_IMAGE_SIZE}px)`;
-        this.#container.style.height = `${this.#y * ITEM_IMAGE_SIZE}px`;
-    }
-
-    #attachListeners() {
-        // Container drag & drop events
-        this.#container.addEventListener('drop', this.#onItemDropped.bind(this));
-        this.#container.addEventListener('dragenter', this.#onDragEnter.bind(this));
-        this.#container.addEventListener('dragleave', this.#onDragLeave.bind(this));
-        this.#container.addEventListener('dragover', this.#onDragOver.bind(this));
-
-        // Item drag events
-        document.addEventListener('itemDragStart', this.#onItemDragStart.bind(this));
-        document.addEventListener('itemDragEnd', this.#onItemDragEnd.bind(this));
-        document.addEventListener('itemMoved', this.#onItemMoved.bind(this));
-    }
-
-    /** @param {HTMLDivElement} item */
-    #attachImageListeners(item) {
-        item.addEventListener("dragstart", this.#onItemDragStartFactory(item));
-        item.addEventListener("dragend", this.#onItemDragEndFactory(item));
-    }
-
-    /** @param {HTMLDivElement} item */
-    #onItemDragStartFactory(item) {
-        /** @param {DragEvent} event */
-        return (event) => {
-            const uid = item.dataset.uid;
-            const data = this.#itemMap[uid];
-
-            this.#dispatchEvent('itemDragStart', { uid, ...data });
-            event.dataTransfer.setDragImage(this.#itemMirrorsMap[uid], 0, 0);
-        }
-    }
-
-    /** @param {HTMLDivElement} item */
-    #onItemDragEndFactory(item) {
-        /** @param {DragEvent} event */
-        return (_) => {
-            this.#dispatchEvent('itemDragEnd', item.dataset.uid)
-        }
-    }
-
-    /** @param {DragEvent} event */
-    #onItemDropped(event) {
-        const { x, y } = this.#getCoordinatesByPosition(event.clientX, event.clientY);
-        const newSlot = this.#getSlotByCoordinates(x, y);
-
-        this.#hideItemShadow();
-
-        if (!this.#canPlaceOnSlot(x, y)) {
-            return;
-        }
-
-        const item = this.#draggedItem;
-        const uid = this.#draggedItemUid;
-        const newItem = {...item, pos: [x, y]};
-        const isOriginatingStorage = !!this.#itemMap[uid];
-
-        console.log({ newSlot, isOriginatingStorage});
-
-        if (isOriginatingStorage) {
-            this.updateItem(uid, newItem);
-            return;
-        }
-
-        this.addItem(newItem)
-            .then(() => {
-                // TODO: Not ideal... it's quite easy to cancel the API call
-                // which removes the item from the other storage...
-                this.#dispatchEvent('itemMoved', uid);
-            })
-            .catch(() => {
-                // TODO: Something went wrong
-            });
-    }
-
-    /** @param {DragEvent} event */
-    #onDragEnter(event) {
-        event.preventDefault();
-
-        if (event.relatedTarget === null) {
-            return;
-        }
-
-        const [x, y] = this.#draggedItem.size;
-        this.#showItemShadow(x, y);
-    }
-
-    /** @param {DragEvent} event */
-    #onDragLeave(event) {
-        const origin = event.relatedTarget?.closest('.item-storage');
-        const destination = event.target?.closest('.item-storage');
-
-        if (origin === destination) {
-            return;
-        }
-
-        this.#hideItemShadow();
-        this.#draggedItemUid = null;
-    }
-
-    /** @param {DragEvent} event */
-    #onDragOver(event) {
-        event.preventDefault();
-        const { x, y } = this.#getCoordinatesByPosition(event.clientX, event.clientY);
-        this.#moveItemShadow(x, y);
-    }
-
-    /** @param {ItemEvent} event */
-    #onItemDragStart(event) {
-        const { uid, ...item } = event.detail;
-        this.#draggedItemUid = uid;
-        this.#draggedItem = item;
-    }
-
-    #onItemDragEnd() {
-        requestAnimationFrame(() => {
-            this.#draggedItem = null;
-            this.#draggedItemUid = null;
-        });
-    }
-
-    /** @param {ItemUidEvent} event */
-    async #onItemMoved(event) {
-        const uid = event.detail;
-        const item = this.#itemMap[uid];
-        const itemElement = this.#getItemElement(uid);
-
-        if (!itemElement || !item) {
+        if (!itemElement) {
             return;
         }
 
         itemElement.remove();
-        await this.removeItem(uid, item);
-        delete this.#itemMap[uid];
+        this.#itemMap.delete(item.uid);
     }
 
-    /** Creates elements for the item shadow */
-    #addShadowElements() {
-        const shadow = createElement('div', { className: 'item-shadow' });
-        this.#itemShadow = shadow;
-        this.#container.append(shadow);
+    /**
+     * Updates an item in the storage
+     * @param {StorageItem} item 
+     */
+    async updateItem(uid, item) {
+        const itemElement = this.#itemMap.get(item.uid);
 
-        const mirrors = createElement('div', { className: 'item-mirrors' });
-        this.#itemMirrors = mirrors;
-        this.#container.append(mirrors);
+        if (!itemElement) {
+            return;
+        }
+
+        const [x, y] = item.pos;
+        const [xSize, ySize] = item.size;
+
+        itemElement.style.gridColumn = `${x} / span ${xSize}`;
+        itemElement.style.gridRow = `${y} / span ${ySize}`;
+    }
+
+    /**
+     * @param {string} uid Item ID
+     * @returns {HTMLDivElement}
+     */
+    getMirrorImage(uid) {
+        return this.#itemMirrorsMap.get(uid);
+    }
+
+    /**
+     * Compares if the storage is the same as another one
+     * @param {Storage} storage
+     * @returns {boolean}
+     */
+    compareWith(storage) {
+        return this.#id === storage?.id;
     }
 
     /**
      * Shows the "shadow" appearing below the item, when dragging it over a storage container
-     * @param {number} x 
-     * @param {number} y 
+     * @param {Coordinates} coordinates 
      */
-    #showItemShadow(x, y) {
+    showItemShadow({ x, y }) {
         this.#itemShadow.style.width = `${x * ITEM_IMAGE_SIZE}px`;
         this.#itemShadow.style.height = `${y * ITEM_IMAGE_SIZE}px`;
         this.#itemShadow.style.gridColumn = `0 / span ${x}`;
@@ -261,14 +130,14 @@ export class Storage {
 
     /**
      * Moves the "shadow" appearing below the item, when dragging it over a storage container
-     * @param {number} x 
-     * @param {number} y 
+     * @param {Coordinates} coordinates 
+     * @param {'free'|'taken'} state 
      */
-    #moveItemShadow(x, y) {
+    moveItemShadow({ x, y }, state) {
         this.#itemShadow.style.gridColumn = x;
         this.#itemShadow.style.gridRow = y;
 
-        if (this.#canPlaceOnSlot(x, y)) {
+        if (state === 'free') {
             this.#itemShadow.classList.remove('red');
             return;
         }
@@ -277,78 +146,78 @@ export class Storage {
     }
 
     /** Hides the "shadow" appearing below the item, when dragging it over a storage container */
-    #hideItemShadow() {
+    hideItemShadow() {
         this.#itemShadow.style.display = 'none';
     }
 
     /**
-     * Places an `Item` into the storage.
-     * @param {Item} item 
+     * @param {StorageItem} item 
+     * @param {Coordinates} coordinates
+     * @returns {boolean}
      */
-    async #createItem(item) {
-        const uid = crypto.randomUUID();
-        const itemImage = this.#createItemImage(item, uid);
-        const mirrorImage = await createDragImage(item);
+    canPlaceOnSlot(item, { x, y }) {
+        const [itemX, itemY] = item.size;
+        const itemEndX = x + itemX - 1;
+        const itemEndY = y + itemY - 1;
+        const items = Array.from(this.#itemMap.values());
 
-        this.#itemMap[uid] = item;
-        this.#itemMirrorsMap[uid] = mirrorImage;
-        this.#attachImageListeners(itemImage);
+        const isOverflowing = itemEndX > this.#x || itemEndY > this.#y;
 
-        this.#container.append(itemImage);
-        this.#itemMirrors.append(mirrorImage);
-    }
-    
-    /**
-     * Removes an item from the storage
-     * @param {string} uid 
-     */
-    #removeItem(uid) {
-        const itemElement = this.#getItemElement(uid);
-
-        if (!itemElement) {
-            return;
+        if (isOverflowing) {
+            return false;
         }
 
-        itemElement.remove();
-        delete this.#itemMap[uid];
+        for (let i = 0; i < items.length; i++) {
+            const currentItem = items[i];
+
+            if (currentItem.dataset.uid === item.uid) {
+                continue;
+            }
+
+            const { gridRowEnd, gridRowStart, gridColumnEnd, gridColumnStart } = getComputedStyle(currentItem);
+            const rowSpan = parseInt(gridRowEnd.split(' ')[1]);
+            const colSpan = parseInt(gridColumnEnd.split(' ')[1]);
+
+            const currentItemY = parseInt(gridRowStart);
+            const currentItemX = parseInt(gridColumnStart);
+            const currentItemEndY = currentItemY + rowSpan - 1;
+            const currentItemEndX = currentItemX + colSpan - 1;
+
+            const areCoordinatesFree =
+                itemEndX < currentItemX
+                || x > currentItemEndX
+                || itemEndY < currentItemY
+                || y > currentItemEndY;
+
+            if (!areCoordinatesFree) {
+                return false;
+            }
+        };
+
+        return true;
+    }
+
+    get id() {
+        return this.#id;
+    }
+
+    get container() {
+        return this.#container;
+    }
+
+    get dimensions() {
+        return {
+            x: this.#x,
+            y: this.#y,
+        };
     }
 
     /**
-     * Updates an item in the storage
-     * @param {string} uid 
-     * @param {Item} item 
-     */
-    #updateItem(uid, item) {
-        const itemElement = this.#getItemElement(uid);
-
-        if (!itemElement) {
-            return;
-        }
-
-
-        const [x, y] = item.pos;
-        const [xSize, ySize] = item.size;
-
-        itemElement.style.gridColumn = `${x} / span ${xSize}`;
-        itemElement.style.gridRow = `${y} / span ${ySize}`;
-        this.#itemMap[uid] = item;
-    }
-
-    /**
-     * Get an item element by UID
-     * @param {string} uid 
-     * @returns {HTMLDivElement}
-     */
-    #getItemElement(uid) {
-        return this.#container.querySelector(`[data-uid="${uid}"]`);
-    }
-
-    /**
-     * @param {Item} item 
      * @param {string} uid GUID
+     * @param {Item} item 
      * @returns {HTMLDivElement}
      */
-    #createItemImage(item, uid) {
+    #createItemImage(uid, item) {
         const [x, y] = item.pos;
         const [xSize, ySize] = item.size;
         const itemImage = createElement('img', { src: item.img });
@@ -366,82 +235,23 @@ export class Storage {
         return itemElement;
     }
 
-    /**
-     * @param {number} x 
-     * @param {number} y 
-     * @returns {boolean}
-     */
-    #canPlaceOnSlot(x, y) {
-        const [itemX, itemY] = this.#draggedItem.size;
-        const itemEndX = x + itemX - 1;
-        const itemEndY = y + itemY - 1;
-        const items = this.#container.querySelectorAll('.item');
+    /** Set dimensions of the storage UI */
+    #setDimesions() {
+        this.#container.style.gridTemplateColumns = `repeat(${this.#x}, ${ITEM_IMAGE_SIZE}px)`;
+        this.#container.style.width = `${this.#x * ITEM_IMAGE_SIZE}px`;
 
-        const isOverflowing = itemEndX > this.#x || itemEndY > this.#y;
-
-        if (isOverflowing) {
-            return false;
-        }
-
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-
-            if (item.dataset.uid === this.#draggedItemUid) continue;
-
-            const { gridRowEnd, gridRowStart, gridColumnEnd, gridColumnStart } = getComputedStyle(item);
-            const rowSpan = parseInt(gridRowEnd.split(' ')[1]);
-            const colSpan = parseInt(gridColumnEnd.split(' ')[1]);
-
-            const currentItemY = parseInt(gridRowStart);
-            const currentItemX = parseInt(gridColumnStart);
-            const currentItemEndY = currentItemY + rowSpan - 1;
-            const currentItemEndX = currentItemX + colSpan - 1;
-
-            const isIntersectingY = (y >= currentItemY && y <= currentItemEndY)
-                || (itemEndY >= currentItemY && itemEndY <= currentItemEndY);
-            const isIntersectingX = (x >= currentItemX && x <= currentItemEndX)
-                || (itemEndX >= currentItemX && itemEndX <= currentItemEndX);
-            const isIntersecting = isIntersectingX && isIntersectingY;
-
-            if (isIntersecting) {
-                return false;
-            }
-        };
-
-        return true;
+        this.#container.style.gridTemplateRows = `repeat(${this.#y}, ${ITEM_IMAGE_SIZE}px)`;
+        this.#container.style.height = `${this.#y * ITEM_IMAGE_SIZE}px`;
     }
 
-    /**
-     * @param {number} x Storage X
-     * @param {number} y Storage Y
-     * @returns {{x: number, y: number}}
-     */
-    #getCoordinatesByPosition(x, y) {
-        const { left, top } = this.#container.getBoundingClientRect();
+    /** Creates elements for the item shadow */
+    #addShadowElements() {
+        const shadow = createElement('div', { className: 'item-shadow' });
+        this.#itemShadow = shadow;
+        this.#container.append(shadow);
 
-        return {
-            x: Math.ceil((x - left) / ITEM_IMAGE_SIZE),
-            y: Math.ceil((y - top) / ITEM_IMAGE_SIZE),
-        };
-    }
-
-    /**
-     * @param {number} x Storage X
-     * @param {number} y Storage Y
-     * @returns {number} Slot number
-     */
-    #getSlotByCoordinates(x, y) {
-        return (x - 1) + ((y - 1) * this.#x);
-    }
-
-    /**
-     * Dispatches DOM event
-     * @template T
-     * @param {string} name 
-     * @param {T} detail
-     */
-    #dispatchEvent(name, detail) {
-        const event = new CustomEvent(name, { detail });
-        document.dispatchEvent(event);
+        const mirrors = createElement('div', { className: 'item-mirrors' });
+        this.#itemMirrors = mirrors;
+        this.#container.append(mirrors);
     }
 }
