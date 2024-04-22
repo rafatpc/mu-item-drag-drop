@@ -22,8 +22,8 @@ jobs:
     
     - run: npm run build
 
-    - name: Get package version
-      id: package_version
+    - name: Get package.json version
+      id: package
       run: echo ::set-output name=version::$(jq -r .version package.json)
     
     - name: Create Release
@@ -32,10 +32,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ steps.package_version.outputs.version }}
+        files: dist/**
+        tag_name: v${{ steps.package.outputs.version }}
         release_name: Release ${{ steps.package_version.outputs.version }}
-        body: |
-          Changes in this release:
-          - Describe your changes here
-        draft: false
-        prerelease: false
+        draft: true
