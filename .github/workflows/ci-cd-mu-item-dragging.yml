@@ -1,10 +1,7 @@
 name: Publishes new version of the library
 
 on:
-  push:
-    branches: ["master"]
-  pull_request:
-    branches: ["master"]
+  workflow_dispatch: # Manual run
 
 jobs:
   build:
