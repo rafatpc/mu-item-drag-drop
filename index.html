@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="stylesheet" href="/assets/styles.css" />
         <title>Item Dragging</title>
     </head>
@@ -12,7 +12,7 @@
             <div id="web-wh" class="item-storage web"></div>
         </div>
         <script type="module">
-            import { StorageSupervisor } from './src/storage-supervisor';
+            import { StorageSupervisor } from "./src/storage-supervisor";
 
             const items = [
                 { img: "/assets/items/1x1.png", pos: { x: 5, y: 10 }, size: { x: 1, y: 1 } },
@@ -37,18 +37,12 @@
                         to: targetStorage.id,
                         isOriginatingStorage: isSameStorage,
                     });
-                }
+                },
             });
 
-            await supervisor.addStorage(
-                'game-storage',
-                { selector: '#game-wh', items }
-            );
+            await supervisor.addStorage("game-storage", { selector: "#game-wh", items });
 
-            await supervisor.addStorage(
-                'web-storage',
-                { selector: '#web-wh', items }
-            );
+            await supervisor.addStorage("web-storage", { selector: "#web-wh", items });
         </script>
     </body>
 </html>
