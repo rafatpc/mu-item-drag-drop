@@ -2,6 +2,8 @@
 
 A JavaScript library to enable drag & drop functionality in Mu Online Webs. It simulates game-like behaviour, giving the users the ability to move and sort items in their warehouses, displayed in the Web interface.
 
+![](https://github.com/mu-item-drag-drop/demo.gif)
+
 ## Usage
 
 ```ts
