@@ -6,6 +6,8 @@ A JavaScript library to enable drag & drop functionality in Mu Online Webs. It s
   <img src="https://github.com/rafatpc/mu-item-drag-drop/blob/master/demo.gif" alt="Demo" />
 </p>
 
+Thanks to Dea7h for the idea, send him salad.
+
 ## Usage
 
 ```ts
