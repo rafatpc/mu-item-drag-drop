@@ -31,5 +31,13 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ steps.package.outputs.version }}-alpha
+        tag_name: v${{steps.package.outputs.version}}
         release_name: Release ${{ steps.package_version.outputs.version }}-alpha
+
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        file: dist/*
+        tag: v${{steps.package.outputs.version}}
+        release_name: Release ${{ steps.package_version.outputs.version }}-alpha
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
