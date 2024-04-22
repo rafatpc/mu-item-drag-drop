@@ -2,9 +2,9 @@ name: Publishes new version of the library
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 
 jobs:
   build:
@@ -32,7 +32,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: dist/**
-        tag_name: v${{ steps.package.outputs.version }}
-        release_name: Release ${{ steps.package_version.outputs.version }}
+        tag_name: v${{ steps.package.outputs.version }}-alpha
+        release_name: Release ${{ steps.package_version.outputs.version }}-alpha
         draft: true
