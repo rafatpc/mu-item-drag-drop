@@ -38,6 +38,7 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         file: dist/*
+        file_glob: true
         tag: v${{steps.package.outputs.version}}
         release_name: Release ${{ steps.package_version.outputs.version }}-alpha
         repo_token: ${{ secrets.GITHUB_TOKEN }}
