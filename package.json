@@ -12,6 +12,7 @@
         "url": "https://github.com/rafatpc/mu-item-drag-drop"
     },
     "devDependencies": {
+        "prettier": "3.2.5",
         "typescript": "^5.4.5",
         "vite": "^5.2.10"
     }

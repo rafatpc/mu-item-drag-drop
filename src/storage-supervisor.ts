@@ -1,17 +1,16 @@
-import { Storage } from './storage';
+import { Storage } from "./storage";
 import { ITEM_IMAGE_SIZE } from "./settings.js";
-import { Api } from './api.js';
-import type { Coordinates, GUID, Item, StorageItem, StorageSupervisorOptions } from './types';
+import type { Coordinates, GUID, Item, StorageAPI, StorageItem, StorageSupervisorOptions } from "./types";
 
 export class StorageSupervisor {
     #storageMap: Map<string, Storage> = new Map();
     #itemMap: Map<GUID, StorageItem> = new Map();
     #itemStorageMap: Map<GUID, string> = new Map();
     #draggedItem: StorageItem | null = null;
-    #api: Api;
+    #api: StorageAPI;
 
-    constructor() {
-        this.#api = new Api();
+    constructor(storageApi: StorageAPI) {
+        this.#api = storageApi;
     }
 
     async addStorage(id: string, { selector, items, x, y }: StorageSupervisorOptions) {
@@ -30,7 +29,8 @@ export class StorageSupervisor {
             return;
         }
 
-        const result = await this.#api.moveItem(itemData, itemStorage, storage);
+        const newSlot = this.#getSlotByCoordinates(storage, item.pos);
+        const result = await this.#api.moveItem(itemData, itemStorage, storage, newSlot);
 
         console.log(result);
 
@@ -57,10 +57,10 @@ export class StorageSupervisor {
     #attachStorageListeners(storage: Storage) {
         const { container } = storage;
 
-        container.addEventListener('dragenter', this.#showItemShadowFactory(storage));
-        container.addEventListener('dragleave', this.#hideItemShadowFactory(storage));
-        container.addEventListener('dragover', this.#moveItemShadowFactory(storage));
-        container.addEventListener('drop', this.#updateItemPositionFactory(storage));
+        container.addEventListener("dragenter", this.#showItemShadowFactory(storage));
+        container.addEventListener("dragleave", this.#hideItemShadowFactory(storage));
+        container.addEventListener("dragover", this.#moveItemShadowFactory(storage));
+        container.addEventListener("drop", this.#updateItemPositionFactory(storage));
     }
 
     #attachItemListeners(uid: GUID, item: HTMLDivElement) {
@@ -82,7 +82,7 @@ export class StorageSupervisor {
             if (mirrorImage) {
                 event.dataTransfer?.setDragImage(mirrorImage, 0, 0);
             }
-        }
+        };
     }
 
     #clearDraggedItem() {
@@ -101,14 +101,14 @@ export class StorageSupervisor {
 
             const newItem = { ...this.#draggedItem, pos: coordinates };
             await this.#moveItem(storage, newItem);
-        }
+        };
     }
 
     #showItemShadowFactory(storage: Storage) {
         return (event: DragEvent) => {
             event.preventDefault();
             this.#showItemShadow(storage);
-        }
+        };
     }
 
     #hideItemShadowFactory(storage: Storage) {
@@ -120,10 +120,10 @@ export class StorageSupervisor {
             event.preventDefault();
 
             const coordinates = this.#getCoordinatesByPosition(storage, event.clientX, event.clientY);
-            const state = storage.canPlaceOnSlot(this.#draggedItem!, coordinates) ? 'free' : 'taken';
+            const state = storage.canPlaceOnSlot(this.#draggedItem!, coordinates) ? "free" : "taken";
 
             storage.moveItemShadow(coordinates, state);
-        }
+        };
     }
 
     #getCoordinatesByPosition(storage: Storage, x: number, y: number): Coordinates {
@@ -169,5 +169,9 @@ export class StorageSupervisor {
 
             storage.hideItemShadow();
         });
+    }
+
+    #getSlotByCoordinates(storage: Storage, coordinates: Coordinates) {
+        return coordinates.x - 1 + (coordinates.y - 1) * storage.dimensions.x;
     }
 }

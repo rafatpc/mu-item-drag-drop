@@ -1,3 +1,4 @@
+import { Storage } from "./storage";
 
 export type Item = {
     img: string;
@@ -6,21 +7,7 @@ export type Item = {
 };
 
 export type GUID = `${string}-${string}-${string}-${string}-${string}`;
-
-export type StorageItem = { uid: GUID; } & Item;
-
-export type ItemEventDetail<T> = {
-    detail: T;
-};
-
-export type ItemEvent = ItemEventDetail<Item> & Event;
-export type ItemUidEvent = ItemEventDetail<string> & Event;
-
-export type StorageOptions = {
-    id: string;
-    x: number;
-    y: number;
-};
+export type StorageItem = { uid: GUID } & Item;
 
 export type Dimensions = {
     x: number;
@@ -32,7 +19,23 @@ export type Coordinates = {
     y: number;
 };
 
+export type StorageOptions = {
+    id: string;
+    x?: number;
+    y?: number;
+};
+
 export type StorageSupervisorOptions = {
     selector: string;
     items: Item[];
 } & Omit<StorageOptions, "id">;
+
+export type StorageData = {
+    item: Item;
+    element: HTMLDivElement;
+    mirror: HTMLCanvasElement;
+};
+
+export type StorageAPI = {
+    moveItem(item: Item, originStorage: Storage, targetStorage: Storage, slot: number): Promise<any>;
+};

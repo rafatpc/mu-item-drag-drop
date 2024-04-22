@@ -1,4 +1,5 @@
-html, body {
+html,
+body {
     margin: 0;
     padding: 0;
     width: 100%;
@@ -16,13 +17,13 @@ html, body {
 
 .item-storage {
     display: grid;
-    background-image: url('/assets/images/slot-empty.png');
+    background-image: url("/assets/images/slot-empty.png");
     overflow: hidden;
     position: relative;
 }
 
 .item {
-    background-image: url('/assets/images/slot-taken.png');
+    background-image: url("/assets/images/slot-taken.png");
     display: flex;
     align-items: center;
     justify-content: center;
@@ -41,7 +42,7 @@ html, body {
 }
 
 .item-shadow {
-    background-image: url('/assets/images/slot-taken.png');
+    background-image: url("/assets/images/slot-taken.png");
     filter: hue-rotate(280deg);
     display: none;
     opacity: 0.5;
@@ -50,5 +51,5 @@ html, body {
 }
 
 .item-shadow.red {
-    filter: hue-rotate(175deg)
+    filter: hue-rotate(175deg);
 }

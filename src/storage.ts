@@ -1,6 +1,6 @@
 import { createElement, createDragImage } from "./helpers";
-import { ITEM_IMAGE_SIZE } from "./settings";
-import { Coordinates, GUID, Item, StorageItem, StorageOptions } from "./types";
+import { ITEM_IMAGE_SIZE, STORAGE_DEFAULT_X, STORAGE_DEFAULT_Y } from "./settings";
+import type { Coordinates, GUID, Item, StorageData, StorageItem, StorageOptions } from "./types";
 
 export class Storage {
     #id;
@@ -11,10 +11,9 @@ export class Storage {
     #itemMirrors: HTMLDivElement;
     #itemShadow: HTMLDivElement;
 
-    #itemMap: Map<string, HTMLDivElement> = new Map();
-    #itemMirrorsMap: Map<string, HTMLCanvasElement> = new Map();
+    #itemMap: Map<GUID, StorageData> = new Map();
 
-    constructor(selector: string, { id, x, y }: StorageOptions) {
+    constructor(selector: string, { id, x = STORAGE_DEFAULT_X, y = STORAGE_DEFAULT_Y }: StorageOptions) {
         this.#container = document.querySelector(selector)!;
         this.#x = x;
         this.#y = y;
@@ -26,55 +25,40 @@ export class Storage {
 
         this.#setDimesions();
 
-        const shadow = createElement<HTMLDivElement>('div', { className: 'item-shadow' });
+        const shadow = createElement<HTMLDivElement>("div", { className: "item-shadow" });
         this.#itemShadow = shadow;
         this.#container.append(shadow);
 
-        const mirrors = createElement<HTMLDivElement>('div', { className: 'item-mirrors' });
+        const mirrors = createElement<HTMLDivElement>("div", { className: "item-mirrors" });
         this.#itemMirrors = mirrors;
         this.#container.append(mirrors);
     }
 
     async addItem(uid: GUID, item: Item): Promise<HTMLDivElement> {
-        const itemImage = this.#createItemImage(uid, item);
-        const mirrorImage = await createDragImage(item);
+        const image = this.#createItemImage(uid, item);
+        const mirror = await createDragImage(item);
 
-        this.#container.append(itemImage);
-        this.#itemMirrors.append(mirrorImage);
+        this.#container.append(image);
+        this.#itemMirrors.append(mirror);
 
-        this.#itemMirrorsMap.set(uid, mirrorImage);
-        this.#itemMap.set(uid, itemImage);
+        this.#itemMap.set(uid, { item, element: image, mirror });
 
-        return itemImage;
+        return image;
     }
 
     async removeItem(item: StorageItem) {
-        const itemElement = this.#itemMap.get(item.uid);
+        const { element } = this.#itemMap.get(item.uid) || {};
 
-        if (!itemElement) {
+        if (!element) {
             return;
         }
 
-        itemElement.remove();
+        element.remove();
         this.#itemMap.delete(item.uid);
     }
 
-    async updateItem(item: StorageItem) {
-        const itemElement = this.#itemMap.get(item.uid);
-
-        if (!itemElement) {
-            return;
-        }
-
-        const { x, y } = item.pos;
-        const { x: xSize, y: ySize } = item.size;
-
-        itemElement.style.gridColumn = `${x} / span ${xSize}`;
-        itemElement.style.gridRow = `${y} / span ${ySize}`;
-    }
-
     getMirrorImage(uid: GUID) {
-        return this.#itemMirrorsMap.get(uid);
+        return this.#itemMap.get(uid)?.mirror;
     }
 
     compareWith(storage: Storage) {
@@ -86,64 +70,46 @@ export class Storage {
         this.#itemShadow.style.height = `${y * ITEM_IMAGE_SIZE}px`;
         this.#itemShadow.style.gridColumn = `0 / span ${x}`;
         this.#itemShadow.style.gridRow = `0 / span ${y}`;
-        this.#itemShadow.style.display = 'block';
+        this.#itemShadow.style.display = "block";
     }
 
-    moveItemShadow({ x, y }: Coordinates, state: 'free' | 'taken') {
+    moveItemShadow({ x, y }: Coordinates, state: "free" | "taken") {
         this.#itemShadow.style.gridColumn = x.toString();
-        this.#itemShadow.style.gridRow = y.toString();;
+        this.#itemShadow.style.gridRow = y.toString();
 
-        if (state === 'free') {
-            this.#itemShadow.classList.remove('red');
+        if (state === "free") {
+            this.#itemShadow.classList.remove("red");
             return;
         }
 
-        this.#itemShadow.classList.add('red');
+        this.#itemShadow.classList.add("red");
     }
 
     hideItemShadow() {
-        this.#itemShadow.style.display = 'none';
+        this.#itemShadow.style.display = "none";
     }
 
-    canPlaceOnSlot(item: StorageItem, { x: itemX, y: itemY }: Coordinates): boolean {
-        const itemEndX = itemX + item.size.x - 1;
-        const itemEndY = itemY + item.size.y - 1;
-        const isOverflowing = itemEndX > this.#x || itemEndY > this.#y;
+    canPlaceOnSlot(draggedItem: StorageItem, coordinates: Coordinates): boolean {
+        const {
+            x: itemX,
+            endX: itemEndX,
+            y: itemY,
+            endY: itemEndY,
+        } = this.#getItemBoundingRect(draggedItem, coordinates);
 
-        if (isOverflowing) {
+        if (itemEndX > this.#x || itemEndY > this.#y) {
             return false;
         }
 
-        const items = Array.from(this.#itemMap.values());
-
-        for (let i = 0; i < items.length; i++) {
-            const currentItem = items[i];
-
-            if (currentItem.dataset.uid === item.uid) {
-                continue;
-            }
-
-            const { gridRowEnd, gridRowStart, gridColumnEnd, gridColumnStart } = getComputedStyle(currentItem);
-            const rowSpan = parseInt(gridRowEnd.split(' ')[1]);
-            const colSpan = parseInt(gridColumnEnd.split(' ')[1]);
-
-            const currentItemY = parseInt(gridRowStart);
-            const currentItemX = parseInt(gridColumnStart);
-            const currentItemEndY = currentItemY + rowSpan - 1;
-            const currentItemEndX = currentItemX + colSpan - 1;
-
-            const areCoordinatesFree =
-                itemEndX < currentItemX
-                || itemX > currentItemEndX
-                || itemEndY < currentItemY
-                || itemY > currentItemEndY;
-
-            if (!areCoordinatesFree) {
+        const isOverlapping = Array.from(this.#itemMap).some(([uid, { item }]) => {
+            if (uid === draggedItem.uid) {
                 return false;
             }
-        };
+            const { x, endX, y, endY } = this.#getItemBoundingRect(item);
+            return itemEndX >= x && itemX <= endX && itemEndY >= y && itemY <= endY;
+        });
 
-        return true;
+        return !isOverlapping;
     }
 
     get id() {
@@ -162,16 +128,16 @@ export class Storage {
     }
 
     #createItemImage(uid: GUID, item: Item) {
-        const itemImage = createElement<HTMLImageElement>('img', { src: item.img });
-        const itemElement = createElement<HTMLDivElement>('div', {
+        const itemImage = createElement<HTMLImageElement>("img", { src: item.img });
+        const itemElement = createElement<HTMLDivElement>("div", {
             draggable: true,
-            className: 'item',
+            className: "item",
             dataset: { uid },
             style: {
                 gridColumn: `${item.pos.x} / span ${item.size.x}`,
                 gridRow: `${item.pos.y} / span ${item.size.y}`,
             },
-            children: [itemImage]
+            children: [itemImage],
         });
 
         return itemElement;
@@ -183,5 +149,16 @@ export class Storage {
 
         this.#container.style.gridTemplateRows = `repeat(${this.#y}, ${ITEM_IMAGE_SIZE}px)`;
         this.#container.style.height = `${this.#y * ITEM_IMAGE_SIZE}px`;
+    }
+
+    #getItemBoundingRect(item: Item, coordinates?: Coordinates) {
+        const { x, y } = coordinates || item.pos;
+
+        return {
+            x,
+            y,
+            endX: x + item.size.x - 1,
+            endY: y + item.size.y - 1,
+        };
     }
 }

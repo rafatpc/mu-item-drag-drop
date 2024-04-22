@@ -6,17 +6,17 @@ import { Item } from "./types";
  */
 export const createElement = <T = HTMLElement>(
     nodeType: string,
-    { style, src, draggable, dataset, className, children }: Record<string, any> = {}
+    { style, src, draggable, dataset, className, children }: Record<string, any> = {},
 ): T => {
     const node = document.createElement(nodeType);
     (node as any).src = src;
     draggable && (node.draggable = draggable);
-    Object.keys(style || {}).forEach(key => node.style[key as any] = style[key]);
-    Object.keys(dataset || {}).forEach(key => node.dataset[key] = dataset[key]);
-    className && node.classList.add(className.split(' '));
+    Object.keys(style || {}).forEach((key) => (node.style[key as any] = style[key]));
+    Object.keys(dataset || {}).forEach((key) => (node.dataset[key] = dataset[key]));
+    className && node.classList.add(className.split(" "));
     (children || []).forEach((child: HTMLElement) => node.append(child));
     return node as T;
-}
+};
 
 /**
  * Creates a dragging image for an item
@@ -42,13 +42,13 @@ export const createDragImage = async (item: Item): Promise<HTMLCanvasElement> =>
     // const background = await createDragBackground(item);
     // context.drawImage(background, 0, 0);
 
-    canvas.style.position = 'absolute';
-    canvas.style.left = '-300px';
-    canvas.style.top = '-300px';
-    canvas.style.zIndex = '-100';
+    canvas.style.position = "absolute";
+    canvas.style.left = "-300px";
+    canvas.style.top = "-300px";
+    canvas.style.zIndex = "-100";
 
     return canvas;
-}
+};
 
 /**
  * Creates a background for the dragging image
@@ -74,18 +74,12 @@ export const createDragBackground = async (item: Item) => {
 
     for (let y = 0; y < repetitionsY; y++) {
         for (let x = 0; x < repetitionsX; x++) {
-            context.drawImage(
-                img,
-                x * ITEM_IMAGE_SIZE,
-                y * ITEM_IMAGE_SIZE,
-                ITEM_IMAGE_SIZE,
-                ITEM_IMAGE_SIZE
-            );
+            context.drawImage(img, x * ITEM_IMAGE_SIZE, y * ITEM_IMAGE_SIZE, ITEM_IMAGE_SIZE, ITEM_IMAGE_SIZE);
         }
     }
 
     return canvas;
-}
+};
 
 export const getSlotTakenImage = () => loadImage("/assets/images/slot-taken.png");
 
@@ -98,4 +92,4 @@ export const loadImage = (src: string): Promise<HTMLImageElement> => {
         img.src = src;
         img.onload = () => resolve(img);
     });
-}
+};
