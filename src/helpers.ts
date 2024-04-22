@@ -1,5 +1,5 @@
-import { ITEM_IMAGE_SIZE } from "./settings.js";
-import { Item } from "./types";
+import { ITEM_IMAGE_SIZE } from "./settings";
+import { GUID, Item } from "./types";
 
 /**
  * Dumb way to save few lines of code and add syntax sugar to elements creation
@@ -92,4 +92,14 @@ export const loadImage = (src: string): Promise<HTMLImageElement> => {
         img.src = src;
         img.onload = () => resolve(img);
     });
+};
+
+export const createGUID = (): GUID => {
+    if (crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+
+    return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
+        (+c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (+c / 4)))).toString(16),
+    ) as GUID;
 };

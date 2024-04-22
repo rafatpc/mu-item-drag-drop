@@ -5,9 +5,14 @@ export default defineConfig({
         target: "esnext",
         lib: {
             entry: "src/storage-supervisor.ts",
-            name: "StorageSupervisor",
+            name: "MUItemDragging",
             formats: ["iife"],
             fileName: () => `mu-item-dragging.js`,
+        },
+        rollupOptions: {
+            output: {
+                footer: `window.StorageSupervisor = MUItemDragging.StorageSupervisor`,
+            },
         },
     },
 });

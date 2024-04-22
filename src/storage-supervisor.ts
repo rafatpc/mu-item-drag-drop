@@ -1,5 +1,6 @@
 import { Storage } from "./storage";
-import { ITEM_IMAGE_SIZE } from "./settings.js";
+import { ITEM_IMAGE_SIZE } from "./settings";
+import { createGUID } from "./helpers";
 import type { Coordinates, GUID, Item, StorageAPI, StorageItem, StorageSupervisorOptions } from "./types";
 
 export class StorageSupervisor {
@@ -39,7 +40,7 @@ export class StorageSupervisor {
     }
 
     async #addItem(storage: Storage, item: Item) {
-        const uid = crypto.randomUUID();
+        const uid = createGUID();
         const itemImage = await storage.addItem(uid, item);
 
         this.#attachItemListeners(uid, itemImage);
