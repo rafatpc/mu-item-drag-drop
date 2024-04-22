@@ -25,17 +25,12 @@ jobs:
     - name: Get package.json version
       id: package
       run: echo "version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
-
-      
-
-    - name: Set ${{ steps.package.outputs.version }}
-      run: echo ${{ steps.package.outputs.version }}
   
-    # - name: Create release
-    #   uses: svenstaro/upload-release-action@v2
-    #   with:
-    #     file: dist/*
-    #     file_glob: true
-    #     tag: v${{steps.package.outputs.version}}
-    #     release_name: ${{ steps.package.outputs.version }}
-    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        file: dist/*
+        file_glob: true
+        tag: v${{steps.package.outputs.version}}
+        release_name: ${{ steps.package.outputs.version }}
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
