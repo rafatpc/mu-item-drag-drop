@@ -7,6 +7,7 @@ A JavaScript library to enable drag & drop functionality in Mu Online Webs. It s
 </p>
 
 Thanks to Dea7h for the idea, send him salad.
+Created for [darksteam.net](https://darksteam.net/)
 
 ## Usage
 
