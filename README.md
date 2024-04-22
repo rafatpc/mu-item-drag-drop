@@ -11,7 +11,7 @@ Thanks to Dea7h for the idea, send him salad.
 ## Usage
 
 ```ts
-// Array of items to be placed inside in the in-game warehouse
+// Array of items to be placed in the in-game warehouse
 const gameItems = [
     { img: "/assets/items/1x4.png", pos: { x: 1, y: 1 }, size: { x: 1, y: 4 } },
     { img: "/assets/items/2x3.png", pos: { x: 5, y: 1 }, size: { x: 2, y: 3 } },
@@ -19,7 +19,7 @@ const gameItems = [
     { img: "/assets/items/4x3.png", pos: { x: 1, y: 12 }, size: { x: 4, y: 3 } },
 ];
 
-// Array of items to be placed inside in the web warehouse
+// Array of items to be placed in the web warehouse
 const webItems = [
     { img: "/assets/items/1x1.png", pos: { x: 5, y: 10 }, size: { x: 1, y: 1 } },
     { img: "/assets/items/1x2.png", pos: { x: 3, y: 1 }, size: { x: 1, y: 2 } },
