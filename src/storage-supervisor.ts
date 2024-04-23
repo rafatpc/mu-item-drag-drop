@@ -14,8 +14,8 @@ export class StorageSupervisor {
         this.#api = storageApi;
     }
 
-    async addStorage(id: string, { selector, items, x, y }: StorageSupervisorOptions) {
-        const storage = new Storage(selector, { x, y, id });
+    async addStorage(id: string, { selector, items, ...storageOptions }: StorageSupervisorOptions) {
+        const storage = new Storage(selector, { id, ...storageOptions });
         this.#storageMap.set(id, storage);
         items.forEach(async (item) => await this.#addItem(storage, item));
         this.#attachStorageListeners(storage);
@@ -164,7 +164,7 @@ export class StorageSupervisor {
     #showItemShadow(activeStorage: Storage) {
         this.#storageMap.forEach((storage) => {
             if (activeStorage.compareWith(storage) && this.#draggedItem) {
-                activeStorage.showItemShadow(this.#draggedItem.size);
+                activeStorage.showItemShadow(this.#draggedItem);
                 return;
             }
 

@@ -23,6 +23,7 @@ export type StorageOptions = {
     id: string;
     x?: number;
     y?: number;
+    fixedItemSize?: boolean;
 };
 
 export type StorageSupervisorOptions = {
