@@ -49,3 +49,47 @@ const supervisor = new StorageSupervisor({
 await supervisor.addStorage("game-storage", { selector: "#game-wh", items: gameItems });
 await supervisor.addStorage("web-storage", { selector: "#web-wh", items: webItems });
 ```
+
+## API
+
+<details>
+    <summary>
+        <code>addStorage(id, options)</code>
+        <code>Adds storage container.</code>
+    </summary>
+
+### Arguments
+
+> | name      | required | description                        |
+> | --------- | -------- | ---------------------------------- |
+> | `id`      | yes      | Given ID for the storage container |
+> | `options` | yes      | Storage options (see list below)   |
+
+<details>
+    <summary>
+        <code>See options list</code>
+    </summary>
+
+> | option          | required | default | description                                     |
+> | --------------- | -------- | ------- | ----------------------------------------------- |
+> | `selector`      | Yes      |         | CSS selector to the storage host element        |
+> | `items`         | Yes      |         | Array of warehouse items                        |
+> | `fixedItemSize` | No       | false   | If `true`, all items in the storage will be 1x1 |
+> | `x`             | No       | 8       | Horizontal size of the warehouse                |
+> | `y`             | No       | 15      | Vertical size of the warehouse                  |
+
+</details>
+
+### Example
+
+> ```javascript
+> supervisor.addStorage("web-storage", {
+>     selector: "#web-wh",
+>     items: webItems,
+>     fixedItemSize: true,
+>     x: 10,
+>     y: 20,
+> });
+> ```
+
+</details>

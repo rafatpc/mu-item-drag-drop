@@ -1,11 +1,12 @@
 import { createElement, createDragImage } from "./helpers";
-import { ITEM_IMAGE_SIZE, STORAGE_DEFAULT_X, STORAGE_DEFAULT_Y } from "./settings";
+import { ITEM_FIXED_SIZE, ITEM_IMAGE_SIZE, STORAGE_DEFAULT_X, STORAGE_DEFAULT_Y } from "./settings";
 import type { Coordinates, GUID, Item, StorageData, StorageItem, StorageOptions } from "./types";
 
 export class Storage {
     #id;
     #x = 0;
     #y = 0;
+    #fixedItemSize = false;
 
     #container: HTMLDivElement;
     #itemMirrors: HTMLDivElement;
@@ -13,8 +14,12 @@ export class Storage {
 
     #itemMap: Map<GUID, StorageData> = new Map();
 
-    constructor(selector: string, { id, x = STORAGE_DEFAULT_X, y = STORAGE_DEFAULT_Y }: StorageOptions) {
+    constructor(
+        selector: string,
+        { id, x = STORAGE_DEFAULT_X, y = STORAGE_DEFAULT_Y, fixedItemSize = false }: StorageOptions,
+    ) {
         this.#container = document.querySelector(selector)!;
+        this.#fixedItemSize = fixedItemSize;
         this.#x = x;
         this.#y = y;
         this.#id = id;
@@ -65,11 +70,12 @@ export class Storage {
         return this.#id === storage?.id;
     }
 
-    showItemShadow({ x, y }: Coordinates) {
-        this.#itemShadow.style.width = `${x * ITEM_IMAGE_SIZE}px`;
-        this.#itemShadow.style.height = `${y * ITEM_IMAGE_SIZE}px`;
-        this.#itemShadow.style.gridColumn = `0 / span ${x}`;
-        this.#itemShadow.style.gridRow = `0 / span ${y}`;
+    showItemShadow(item: Item) {
+        const { x: sizeX, y: sizeY } = this.#getItemSize(item);
+        this.#itemShadow.style.width = `${sizeX * ITEM_IMAGE_SIZE}px`;
+        this.#itemShadow.style.height = `${sizeY * ITEM_IMAGE_SIZE}px`;
+        this.#itemShadow.style.gridColumn = `0 / span ${sizeX}`;
+        this.#itemShadow.style.gridRow = `0 / span ${sizeY}`;
         this.#itemShadow.style.display = "block";
     }
 
@@ -129,13 +135,14 @@ export class Storage {
 
     #createItemImage(uid: GUID, item: Item) {
         const itemImage = createElement<HTMLImageElement>("img", { src: item.img });
+        const { x: sizeX, y: sizeY } = this.#getItemSize(item);
         const itemElement = createElement<HTMLDivElement>("div", {
             draggable: true,
             className: "item",
             dataset: { uid },
             style: {
-                gridColumn: `${item.pos.x} / span ${item.size.x}`,
-                gridRow: `${item.pos.y} / span ${item.size.y}`,
+                gridColumn: `${item.pos.x} / span ${sizeX}`,
+                gridRow: `${item.pos.y} / span ${sizeY}`,
             },
             children: [itemImage],
         });
@@ -153,12 +160,20 @@ export class Storage {
 
     #getItemBoundingRect(item: Item, coordinates?: Coordinates) {
         const { x, y } = coordinates || item.pos;
+        const { x: sizeX, y: sizeY } = this.#getItemSize(item);
 
         return {
             x,
             y,
-            endX: x + item.size.x - 1,
-            endY: y + item.size.y - 1,
+            endX: x + sizeX - 1,
+            endY: y + sizeY - 1,
+        };
+    }
+
+    #getItemSize(item: Item) {
+        return {
+            x: this.#fixedItemSize ? ITEM_FIXED_SIZE : item.size.x,
+            y: this.#fixedItemSize ? ITEM_FIXED_SIZE : item.size.y,
         };
     }
 }
