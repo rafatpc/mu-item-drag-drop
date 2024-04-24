@@ -37,6 +37,23 @@ export type StorageData = {
     mirror: HTMLCanvasElement;
 };
 
-export type StorageAPI = {
-    moveItem(item: Item, originStorage: Storage, targetStorage: Storage, slot: number): Promise<any>;
+type Listener = Parameters<typeof document.addEventListener>;
+
+type ItemListener<T extends Listener> = T extends [infer _, infer _, ...infer C]
+    ? [keyof HTMLElementEventMap, (...args: any[]) => void, ...C]
+    : never;
+
+export type StorageSupervisorData = {
+    item: StorageItem;
+    storage: Storage;
+    element: HTMLDivElement;
+    listeners: ItemListener<Listener>[];
 };
+
+export type StorageAPI = {
+    moveItem(item: StorageItem, originStorage: Storage, targetStorage: Storage, slot: number): Promise<Item | void>;
+    onItemCreated?(item: StorageItem, element: HTMLElement, storage: Storage): void;
+    onItemDestroyed?(item: StorageItem, element: HTMLElement, storage: Storage): void;
+};
+
+export type { Storage } from "./storage";

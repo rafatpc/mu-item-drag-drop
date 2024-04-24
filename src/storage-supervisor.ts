@@ -1,12 +1,20 @@
 import { Storage } from "./storage";
 import { ITEM_IMAGE_SIZE } from "./settings";
 import { createGUID } from "./helpers";
-import type { Coordinates, GUID, Item, StorageAPI, StorageItem, StorageSupervisorOptions } from "./types";
+import type {
+    Coordinates,
+    GUID,
+    Item,
+    StorageAPI,
+    StorageItem,
+    StorageSupervisorData,
+    StorageSupervisorOptions,
+} from "./types";
 
 export class StorageSupervisor {
     #storageMap: Map<string, Storage> = new Map();
-    #itemMap: Map<GUID, StorageItem> = new Map();
-    #itemStorageMap: Map<GUID, string> = new Map();
+    #itemMap: Map<GUID, StorageSupervisorData> = new Map();
+
     #draggedItem: StorageItem | null = null;
     #api: StorageAPI;
 
@@ -31,27 +39,32 @@ export class StorageSupervisor {
         }
 
         const newSlot = this.#getSlotByCoordinates(storage, item.pos);
-        const result = await this.#api.moveItem(itemData, itemStorage, storage, newSlot);
+        const newItem = (await this.#api.moveItem(item, itemStorage, storage, newSlot)) ?? itemData;
 
-        console.log(result);
-
-        this.#removeItem(itemStorage, item);
-        await this.#addItem(storage, itemData);
+        this.#removeItem(item);
+        await this.#addItem(storage, newItem);
     }
 
-    async #addItem(storage: Storage, item: Item) {
+    async #addItem(storage: Storage, itemData: Item) {
         const uid = createGUID();
-        const itemImage = await storage.addItem(uid, item);
+        const item: StorageItem = { uid, ...itemData };
+        const element = await storage.addItem(uid, itemData);
 
-        this.#attachItemListeners(uid, itemImage);
+        this.#itemMap.set(uid, { item, storage, element, listeners: [] });
 
-        this.#itemStorageMap.set(uid, storage.id);
-        this.#itemMap.set(uid, { uid, ...item });
+        this.#attachItemListeners(item, storage, element);
     }
 
-    #removeItem(storage: Storage, item: StorageItem) {
-        this.#itemStorageMap.delete(item.uid);
-        this.#itemMap.set(item.uid, item);
+    #removeItem(item: StorageItem) {
+        const { storage, element } = this.#itemMap.get(item.uid) || {};
+
+        if (!storage || !element) {
+            return;
+        }
+
+        this.#detachItemListeners(item, storage, element);
+        this.#itemMap.delete(item.uid);
+
         storage.removeItem(item);
     }
 
@@ -64,21 +77,41 @@ export class StorageSupervisor {
         container.addEventListener("drop", this.#updateItemPositionFactory(storage));
     }
 
-    #attachItemListeners(uid: GUID, item: HTMLDivElement) {
-        item.addEventListener("dragstart", this.#setDraggedItemFactory(uid));
-        item.addEventListener("dragend", this.#clearDraggedItem.bind(this));
+    #attachItemListeners(item: StorageItem, storage: Storage, element: HTMLDivElement) {
+        const { listeners = [] } = this.#itemMap.get(item.uid) || {};
+
+        listeners.push(
+            ["dragstart", this.#setDraggedItemFactory(item.uid)],
+            ["dragend", this.#clearDraggedItem.bind(this)],
+        );
+
+        listeners.forEach((listener) => element.addEventListener(...listener));
+
+        if (this.#api.onItemCreated) {
+            this.#api.onItemCreated(item, element, storage);
+        }
+    }
+
+    #detachItemListeners(item: StorageItem, storage: Storage, element: HTMLDivElement) {
+        const { listeners = [] } = this.#itemMap.get(item.uid) || {};
+
+        listeners.forEach((listener) => element.removeEventListener(...listener));
+
+        if (this.#api.onItemDestroyed) {
+            this.#api.onItemDestroyed(item, element, storage);
+        }
     }
 
     #setDraggedItemFactory(uid: GUID) {
         return (event: DragEvent) => {
             const mirrorImage = this.#getMirrorImage(uid);
-            const item = this.#itemMap.get(uid);
+            const { item } = this.#itemMap.get(uid) || {};
 
             if (!item) {
                 return;
             }
 
-            this.#draggedItem = { ...item, uid };
+            this.#draggedItem = item;
 
             if (mirrorImage) {
                 event.dataTransfer?.setDragImage(mirrorImage, 0, 0);
@@ -147,8 +180,8 @@ export class StorageSupervisor {
     }
 
     #getStorageByItemId(uid: GUID) {
-        const storageId = this.#itemStorageMap.get(uid);
-        return this.#storageMap.get(storageId!);
+        const { storage } = this.#itemMap.get(uid) || {};
+        return storage;
     }
 
     #hideItemShadow(activeStorage: Storage) {
