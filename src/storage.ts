@@ -7,6 +7,7 @@ export class Storage {
     #x = 0;
     #y = 0;
     #fixedItemSize = false;
+    #autoPlaceItems = false;
 
     #container: HTMLDivElement;
     #itemMirrors: HTMLDivElement;
@@ -16,10 +17,17 @@ export class Storage {
 
     constructor(
         selector: string,
-        { id, x = STORAGE_DEFAULT_X, y = STORAGE_DEFAULT_Y, fixedItemSize = false }: StorageOptions,
+        {
+            id,
+            x = STORAGE_DEFAULT_X,
+            y = STORAGE_DEFAULT_Y,
+            fixedItemSize = false,
+            autoPlaceItems = false,
+        }: StorageOptions,
     ) {
         this.#container = document.querySelector(selector)!;
         this.#fixedItemSize = fixedItemSize;
+        this.#autoPlaceItems = autoPlaceItems;
         this.#x = x;
         this.#y = y;
         this.#id = id;
@@ -76,11 +84,14 @@ export class Storage {
         this.#itemShadow.style.display = "block";
     }
 
-    moveItemShadow({ x, y }: Coordinates, state: "free" | "taken") {
+    moveItemShadow(item: StorageItem, coordinates: Coordinates) {
+        const { x, y } = this.getNewItemPosition(item, coordinates);
+        const isSlotFree = this.canPlaceOnSlot(item, { x, y });
+
         this.#itemShadow.style.gridColumn = x.toString();
         this.#itemShadow.style.gridRow = y.toString();
 
-        if (state === "free") {
+        if (isSlotFree) {
             this.#itemShadow.classList.remove("red");
             return;
         }
@@ -92,27 +103,16 @@ export class Storage {
         this.#itemShadow.style.display = "none";
     }
 
-    canPlaceOnSlot(draggedItem: StorageItem, coordinates: Coordinates): boolean {
-        const {
-            x: itemX,
-            endX: itemEndX,
-            y: itemY,
-            endY: itemEndY,
-        } = this.#getItemBoundingRect(draggedItem, coordinates);
+    canPlaceOnSlot(draggedItem: StorageItem, coordinates: Coordinates) {
+        return !this.#isItemOverlapping(draggedItem, this.getNewItemPosition(draggedItem, coordinates));
+    }
 
-        if (itemEndX > this.#x || itemEndY > this.#y) {
-            return false;
+    getNewItemPosition(item: StorageItem, coordinates: Coordinates) {
+        if (this.#autoPlaceItems) {
+            return this.#getNextFreeCoordinates(item);
         }
 
-        const isOverlapping = Array.from(this.#itemMap).some(([uid, { item }]) => {
-            if (uid === draggedItem.uid) {
-                return false;
-            }
-            const { x, endX, y, endY } = this.#getItemBoundingRect(item);
-            return itemEndX >= x && itemX <= endX && itemEndY >= y && itemY <= endY;
-        });
-
-        return !isOverlapping;
+        return coordinates;
     }
 
     get id() {
@@ -172,5 +172,40 @@ export class Storage {
             x: this.#fixedItemSize ? ITEM_FIXED_SIZE : item.size.x,
             y: this.#fixedItemSize ? ITEM_FIXED_SIZE : item.size.y,
         };
+    }
+
+    #isItemOverlapping(currentItem: StorageItem, coordinates: Coordinates) {
+        const {
+            x: itemX,
+            endX: itemEndX,
+            y: itemY,
+            endY: itemEndY,
+        } = this.#getItemBoundingRect(currentItem, coordinates);
+
+        if (itemEndX > this.#x || itemEndY > this.#y) {
+            return true;
+        }
+
+        return Array.from(this.#itemMap).some(([uid, { item }]) => {
+            if (uid === currentItem.uid) {
+                return false;
+            }
+            const { x, endX, y, endY } = this.#getItemBoundingRect(item);
+            return itemEndX >= x && itemX <= endX && itemEndY >= y && itemY <= endY;
+        });
+    }
+
+    #getNextFreeCoordinates(item: StorageItem) {
+        for (let y = 1; y <= this.#y; y++) {
+            for (let x = 1; x <= this.#x; x++) {
+                if (this.#isItemOverlapping(item, { x, y })) {
+                    continue;
+                }
+
+                return { x, y };
+            }
+        }
+
+        return { x: -1, y: -1 };
     }
 }

@@ -59,4 +59,4 @@ const supervisor = new StorageSupervisor({
 });
 
 await supervisor.addStorage("game-storage", { selector: "#game-wh", items });
-await supervisor.addStorage("web-storage", { selector: "#web-wh", items, fixedItemSize: true });
+await supervisor.addStorage("web-storage", { selector: "#web-wh", items, fixedItemSize: true, autoPlaceItems: true });

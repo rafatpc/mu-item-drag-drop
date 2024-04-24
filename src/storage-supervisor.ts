@@ -125,7 +125,7 @@ export class StorageSupervisor {
 
     #updateItemPositionFactory(storage: Storage) {
         return async (event: DragEvent) => {
-            const coordinates = this.#getCoordinatesByPosition(storage, event.clientX, event.clientY);
+            const coordinates = this.#getCoordinatesByMousePosition(storage, event.clientX, event.clientY);
 
             storage.hideItemShadow();
 
@@ -133,7 +133,9 @@ export class StorageSupervisor {
                 return;
             }
 
-            const newItem = { ...this.#draggedItem, pos: coordinates };
+            const pos = storage.getNewItemPosition(this.#draggedItem, coordinates);
+            const newItem = { ...this.#draggedItem, pos };
+
             await this.#moveItem(storage, newItem);
         };
     }
@@ -152,15 +154,12 @@ export class StorageSupervisor {
     #moveItemShadowFactory(storage: Storage) {
         return (event: DragEvent) => {
             event.preventDefault();
-
-            const coordinates = this.#getCoordinatesByPosition(storage, event.clientX, event.clientY);
-            const state = storage.canPlaceOnSlot(this.#draggedItem!, coordinates) ? "free" : "taken";
-
-            storage.moveItemShadow(coordinates, state);
+            const coordinates = this.#getCoordinatesByMousePosition(storage, event.clientX, event.clientY);
+            storage.moveItemShadow(this.#draggedItem!, coordinates);
         };
     }
 
-    #getCoordinatesByPosition(storage: Storage, x: number, y: number): Coordinates {
+    #getCoordinatesByMousePosition(storage: Storage, x: number, y: number): Coordinates {
         const { left, top } = storage.container.getBoundingClientRect();
 
         return {

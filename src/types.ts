@@ -24,6 +24,7 @@ export type StorageOptions = {
     x?: number;
     y?: number;
     fixedItemSize?: boolean;
+    autoPlaceItems?: boolean;
 };
 
 export type StorageSupervisorOptions = {
