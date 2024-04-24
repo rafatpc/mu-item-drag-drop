@@ -52,13 +52,10 @@ export class Storage {
     }
 
     async removeItem(item: StorageItem) {
-        const { element } = this.#itemMap.get(item.uid) || {};
+        const { element, mirror } = this.#itemMap.get(item.uid) || {};
 
-        if (!element) {
-            return;
-        }
-
-        element.remove();
+        element?.remove();
+        mirror?.remove();
         this.#itemMap.delete(item.uid);
     }
 
