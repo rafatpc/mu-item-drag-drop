@@ -14,6 +14,17 @@ const items = [
     { img: "/assets/items/4x3.png", pos: { x: 1, y: 12 }, size: { x: 4, y: 3 } },
 ];
 
+const webItems = Array.from([...items, ...items]).map((item, idx) => {
+    const slot = idx + 1;
+    const y = Math.ceil(slot / 8);
+    const x = slot - (y - 1) * 8;
+
+    return {
+        ...item,
+        pos: { y, x },
+    };
+});
+
 const tooltips = new Map<GUID, TippyInstance>();
 
 const supervisor = new StorageSupervisor({
@@ -59,4 +70,9 @@ const supervisor = new StorageSupervisor({
 });
 
 await supervisor.addStorage("game-storage", { selector: "#game-wh", items });
-await supervisor.addStorage("web-storage", { selector: "#web-wh", items, fixedItemSize: true });
+await supervisor.addStorage("web-storage", {
+    selector: "#web-wh",
+    items: webItems,
+    fixedItemSize: true,
+    autoPlaceItems: true,
+});
